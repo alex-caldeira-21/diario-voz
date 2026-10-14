@@ -5,3 +5,5 @@ __pycache__/
 sync/state/
 sync/logs/
 .claude/settings.local.json
+.venv/
+*.tmp
