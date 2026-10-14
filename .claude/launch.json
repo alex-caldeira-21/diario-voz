@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pwa",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8080", "-d", "docs", "--bind", "127.0.0.1"],
+      "port": 8080,
+      "url": "http://localhost:8080"
+    }
+  ]
+}

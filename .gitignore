@@ -1,0 +1,7 @@
+.env
+.clasprc.json
+__pycache__/
+*.log
+sync/state/
+sync/logs/
+.claude/settings.local.json

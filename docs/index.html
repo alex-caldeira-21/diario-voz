@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://script.google.com https://script.googleusercontent.com; font-src 'self'; img-src 'self' data:">
+  <meta name="theme-color" content="#16133D">
+  <meta name="color-scheme" content="dark light">
+  <title>Diário por voz</title>
+  <meta name="description" content="Diário por voz e segunda memória pessoal.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icones/icone-192.png" type="image/png">
+  <link rel="preload" href="fontes/atkinson-hyperlegible-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fontes/bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="estilo.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <nav class="abas" role="tablist" aria-label="Seções">
+    <button role="tab" id="aba-registrar" aria-controls="tela-registrar" aria-selected="true">Registrar</button>
+    <button role="tab" id="aba-perguntar" aria-controls="tela-perguntar" aria-selected="false" tabindex="-1">Perguntar</button>
+    <button role="tab" id="aba-recentes" aria-controls="tela-recentes" aria-selected="false" tabindex="-1">Recentes</button>
+    <button role="tab" id="aba-ajustes" aria-controls="tela-ajustes" aria-selected="false" tabindex="-1" class="aba-icone" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+    </button>
+  </nav>
+
+  <main>
+    <!-- Registrar -->
+    <section class="tela tela-registrar" id="tela-registrar" role="tabpanel" aria-labelledby="aba-registrar">
+      <header class="cabecalho-dia">
+        <h1 class="data-hoje" id="data-hoje"><span id="dia-semana">Hoje</span><span id="dia-mes"></span></h1>
+        <p class="na-fila" id="na-fila" aria-live="polite" hidden></p>
+      </header>
+
+      <div class="campo">
+        <label for="texto" class="visualmente-oculto">Texto da entrada</label>
+        <textarea id="texto" maxlength="10000" placeholder="Toque no microfone ou escreva aqui." autocomplete="off" spellcheck="true"></textarea>
+        <div class="ao-vivo" id="ao-vivo" aria-live="polite" hidden><span class="final"></span><span class="parcial"></span></div>
+      </div>
+      <p class="aviso" id="aviso-voz" role="alert" hidden></p>
+
+      <div class="controles">
+        <button class="mic" id="mic" type="button" aria-pressed="false" aria-label="Começar a ditar">
+          <span class="anel" aria-hidden="true"></span>
+          <span class="anel-cor" aria-hidden="true"></span>
+          <span class="miolo" aria-hidden="true">
+            <svg class="icone-mic" viewBox="0 0 24 24" width="30" height="30" focusable="false"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>
+            <svg class="icone-parar" viewBox="0 0 24 24" width="26" height="26" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+          </span>
+        </button>
+        <div class="botoes">
+          <button type="button" class="botao secundario" id="limpar">Limpar</button>
+          <button type="button" class="botao primario" id="salvar">Salvar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Perguntar -->
+    <section class="tela tela-perguntar" id="tela-perguntar" role="tabpanel" aria-labelledby="aba-perguntar" hidden>
+      <h1 class="titulo">Pergunte ao diário</h1>
+      <form id="form-pergunta" class="form-pergunta">
+        <div class="campo campo-pergunta">
+          <label for="pergunta" class="visualmente-oculto">Pergunta</label>
+          <textarea id="pergunta" maxlength="2000" placeholder="O que aconteceu no POP de Pederneiras?" autocomplete="off"></textarea>
+          <div class="ao-vivo" id="ao-vivo-pergunta" aria-live="polite" hidden><span class="final"></span><span class="parcial"></span></div>
+        </div>
+        <fieldset class="periodo">
+          <legend>Período</legend>
+          <label><input type="radio" name="dias" value="7"><span>7 dias</span></label>
+          <label><input type="radio" name="dias" value="30" checked><span>30 dias</span></label>
+          <label><input type="radio" name="dias" value="90"><span>90 dias</span></label>
+        </fieldset>
+        <div class="acoes-pergunta">
+          <button class="mic mic-pequeno" id="mic-pergunta" type="button" aria-pressed="false" aria-label="Ditar a pergunta">
+            <span class="anel" aria-hidden="true"></span>
+            <span class="anel-cor" aria-hidden="true"></span>
+            <span class="miolo" aria-hidden="true">
+              <svg class="icone-mic" viewBox="0 0 24 24" width="22" height="22" focusable="false"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>
+              <svg class="icone-parar" viewBox="0 0 24 24" width="20" height="20" focusable="false"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+            </span>
+          </button>
+          <button type="submit" class="botao primario" id="perguntar">Perguntar</button>
+        </div>
+      </form>
+      <p class="aviso" id="aviso-pergunta" role="alert" hidden></p>
+      <div class="resposta" id="resposta" aria-live="polite"></div>
+    </section>
+
+    <!-- Recentes -->
+    <section class="tela tela-recentes" id="tela-recentes" role="tabpanel" aria-labelledby="aba-recentes" hidden>
+      <h1 class="visualmente-oculto">Recentes</h1>
+      <p class="nota" id="nota-recentes" hidden></p>
+      <div id="linha-do-tempo" class="linha-do-tempo"></div>
+    </section>
+
+    <!-- Ajustes -->
+    <section class="tela tela-ajustes" id="tela-ajustes" role="tabpanel" aria-labelledby="aba-ajustes" hidden>
+      <h1 class="titulo">Ajustes</h1>
+      <div class="boas-vindas" id="boas-vindas" hidden>
+        <p>Para começar, informe a URL do web app e o token.</p>
+        <p>A URL termina em <code>/exec</code> e está no README do projeto. O token tem 64 caracteres e apareceu no registro de execução do <code>setup()</code>, no editor do Apps Script.</p>
+      </div>
+      <form id="form-ajustes" class="form-ajustes" novalidate>
+        <label for="url">URL do web app</label>
+        <input id="url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+
+        <label for="token">Token</label>
+        <div class="linha-token">
+          <input id="token" type="password" autocomplete="off" spellcheck="false">
+          <button type="button" class="botao secundario" id="mostrar-token" aria-pressed="false" aria-controls="token">Mostrar</button>
+        </div>
+
+        <fieldset class="periodo tema">
+          <legend>Tema</legend>
+          <label><input type="radio" name="tema" value="sistema" checked><span>Sistema</span></label>
+          <label><input type="radio" name="tema" value="escuro"><span>Escuro</span></label>
+          <label><input type="radio" name="tema" value="claro"><span>Claro</span></label>
+        </fieldset>
+
+        <div class="acoes-ajustes">
+          <button type="submit" class="botao primario" id="testar">Testar conexão</button>
+          <button type="button" class="botao secundario" id="enviar-fila">Enviar fila agora</button>
+        </div>
+      </form>
+      <p class="nota" id="versao">Versão</p>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toast-texto"></span><button type="button" id="toast-acao" class="toast-acao" hidden></button></div>
+</body>
+</html>

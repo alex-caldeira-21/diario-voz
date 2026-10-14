@@ -1,0 +1,8 @@
+#!/bin/sh
+# Bloqueia commit com chave da Anthropic ou APP_TOKEN preenchido nos arquivos staged.
+# SPEC.md e este hook citam os padrões literalmente, por isso ficam de fora.
+if git grep --cached -nE "sk-ant|APP_TOKEN=.+" -- . ':!SPEC.md' ':!.githooks/'; then
+  echo "pre-commit: possível segredo encontrado acima. Commit bloqueado." >&2
+  exit 1
+fi
+exit 0
