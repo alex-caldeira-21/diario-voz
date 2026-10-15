@@ -53,6 +53,7 @@
   --fonte-texto: "Atkinson Hyperlegible", system-ui, sans-serif;
 
   --gutter: 16px;
+  --altura-nav: 69px;
   color-scheme: dark;
 }
 
@@ -126,55 +127,106 @@ code {
   font-weight: 700;
 }
 
-/* ---------- abas ---------- */
+/* ---------- navegação ---------- */
+/* Celular: barra fixa embaixo, na zona do polegar. PC (>= 768px): barra no topo.
+   Ícone e nome em todos os botões; o ativo fica preenchido, com a linha do espectro. */
 
 .abas {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 10;
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  padding: env(safe-area-inset-top) max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
-  background: var(--tinta);
-  border-bottom: 1px solid var(--linha);
+  padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  background: var(--superficie);
+  border-top: 1px solid var(--linha);
 }
 
 .abas [role="tab"] {
   position: relative;
-  min-height: 48px;
-  min-width: 48px;
-  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 4px 2px;
   border: 0;
+  border-radius: 14px;
   background: none;
   color: var(--texto-2);
-  font-size: var(--fs-2);
+  font-size: var(--fs-1);
+  font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
 }
-.abas [role="tab"]:first-child { padding-left: 0; }
-.abas [role="tab"][aria-selected="true"] { color: var(--texto); font-weight: 700; }
-.abas [role="tab"][aria-selected="true"]::after {
+.abas svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.abas svg .cheio { fill: currentColor; stroke: none; }
+.abas [role="tab"]:hover { color: var(--texto); }
+.abas [role="tab"][aria-selected="true"] {
+  color: var(--texto);
+  background: color-mix(in srgb, var(--texto) 13%, var(--superficie));
+}
+.abas [role="tab"][aria-selected="true"]::before {
   content: "";
   position: absolute;
-  left: 10px; right: 10px; bottom: -1px;
+  top: -7px;
+  left: 20%;
+  right: 20%;
   height: 3px;
+  border-radius: 0 0 3px 3px;
   background: var(--espectro-linear);
 }
-.abas [role="tab"]:first-child[aria-selected="true"]::after { left: 0; }
-.abas .aba-icone {
-  margin-left: auto;
-  display: grid;
-  place-items: center;
-  padding: 0;
+
+body { padding-bottom: calc(var(--altura-nav) + env(safe-area-inset-bottom)); }
+
+@media (min-width: 768px) {
+  body { padding-bottom: 0; }
+  .abas {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    display: flex;
+    gap: 8px;
+    padding: calc(10px + env(safe-area-inset-top)) max(var(--gutter), calc((100% - 40rem) / 2 + var(--gutter))) 10px;
+    background: var(--tinta);
+    border-top: 0;
+    border-bottom: 1px solid var(--linha);
+  }
+  .abas [role="tab"] {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: var(--r-pilula);
+    font-size: var(--fs-2);
+  }
+  .abas [role="tab"]:last-child { margin-left: auto; }
+  .abas [role="tab"][aria-selected="true"]::before {
+    top: auto;
+    bottom: -11px;
+    left: 18px;
+    right: 18px;
+    border-radius: 3px 3px 0 0;
+  }
 }
-.abas .aba-icone[aria-selected="true"]::after { left: 8px; right: 8px; }
 
 /* ---------- telas ---------- */
 
 main {
   max-width: 40rem;
   margin: 0 auto;
-  padding: 0 max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) max(var(--gutter), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
 }
 
 .tela {
@@ -206,7 +258,11 @@ main {
 .tela-registrar:not([hidden]) {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 49px - env(safe-area-inset-top));
+  min-height: calc(100dvh - var(--altura-nav) - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+}
+@media (min-width: 768px) {
+  main { padding-top: 0; }
+  .tela-registrar:not([hidden]) { min-height: calc(100dvh - var(--altura-nav) - env(safe-area-inset-top)); }
 }
 
 .cabecalho-dia { margin-bottom: 16px; }
@@ -504,7 +560,7 @@ main {
 .toast {
   position: fixed;
   left: 50%;
-  top: calc(60px + env(safe-area-inset-top));
+  top: calc(16px + env(safe-area-inset-top));
   transform: translateX(-50%);
   z-index: 20;
   width: max-content;
@@ -528,4 +584,8 @@ main {
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .toast { top: calc(84px + env(safe-area-inset-top)); }
 }

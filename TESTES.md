@@ -10,11 +10,11 @@ importe de guardar (por exemplo, começando com `[teste]`).
 |---|---|---|---|
 | 1 | Entrada ditada offline aparece na planilha com o `criado_em` original, depois que a rede volta, sem reabrir o app | ok (14/10/2026) | Teste D3 no Android |
 | 2 | Reenviar o mesmo id não gera uma segunda linha | ok (14/10/2026) | `testeRegistrar()` |
-| 3 | Com a `ANTHROPIC_KEY` inválida, a entrada é salva com `classificado=FALSE` e reclassificada depois | **pendente** | Teste B |
+| 3 | Com a `ANTHROPIC_KEY` inválida, a entrada é salva com `classificado=FALSE` e reclassificada depois | ok (15/10/2026) | Teste B |
 | 4 | Rodar o sync duas vezes seguidas não duplica nada no vault | ok (14/10/2026) | pytest + execução real + simulação de queda antes do `marcar` |
 | 5 | Nenhum segredo no repositório | ok (14/10/2026) | `git grep` limpo + hook `pre-commit` testado com chave falsa |
 | 6 | App instalável no Android, com atalhos e alvo de compartilhamento | ok (14/10/2026) | Testes D1, D4, D5 |
-| 7 | Tema claro e escuro, movimento reduzido respeitado, Lighthouse Acessibilidade ≥ 95 | temas e Lighthouse ok; **movimento reduzido pendente** | Teste F (Lighthouse: 100) e teste E3 |
+| 7 | Tema claro e escuro, movimento reduzido respeitado, Lighthouse Acessibilidade ≥ 95 | ok (15/10/2026) | Teste F (Lighthouse: 100) e teste E3 |
 
 ---
 
@@ -85,16 +85,16 @@ URL: https://alex-caldeira-21.github.io/diario-voz/
 | D3 | Modo avião → ditar pelo microfone do Gboard → **Salvar** → fechar o app → desligar o modo avião → esperar 1–2 min sem abrir | Mensagem "Sem conexão…", contador "1 na fila"; a linha aparece na planilha com o horário em que foi falada | ok |
 | D4 | WhatsApp → segurar uma mensagem → **Compartilhar** → **Diário** | O texto aparece no campo, sem salvar sozinho; origem `compartilhar` na planilha | ok |
 | D5 | Segurar o ícone do app | Atalhos **Ditar** (abre gravando) e **Perguntar** | ok |
-| D6 | **Recentes** | Linha do tempo por dia, barra do espectro do dia, faixas coloridas, chips de tags; pendentes locais como "na fila" | não relatado |
-| D7 | **Perguntar** sobre algo registrado, período de 30 dias | Resposta citando a data (DD/MM) e "Baseado em N entradas" | não relatado (o backend passou no `testePerguntar`) |
+| D6 | **Recentes** | Linha do tempo por dia, barra do espectro do dia, faixas coloridas, chips de tags; pendentes locais como "na fila" | ok |
+| D7 | **Perguntar** sobre algo registrado, período de 30 dias | Resposta citando a data (DD/MM) e "Baseado em N entradas" | ok |
 
 ## E. Windows
 
 | # | Passo | Esperado | Status |
 |---|---|---|---|
-| E1 | Abrir a URL no **Chrome** e no **Edge**; instalar pelo ícone de instalação na barra de endereço | Instala como app; ditado pelo anel funciona; origem `windows` na planilha | pendente |
-| E2 | Clicar no campo de texto e usar **Win+H** (digitação por voz do Windows) | O texto ditado entra no campo; **Salvar** funciona | pendente |
-| E3 | **Configurações** → **Acessibilidade** → **Efeitos visuais** → desligar **Efeitos de animação**; reabrir o app | O anel para de girar; ao ditar, os pulsos viram uma leve troca de opacidade | pendente |
+| E1 | Abrir a URL no **Chrome** e no **Edge**; instalar pelo ícone de instalação na barra de endereço | Instala como app; ditado pelo anel funciona; origem `windows` na planilha | ok |
+| E2 | Clicar no campo de texto e usar **Win+H** (digitação por voz do Windows) | O texto ditado entra no campo; **Salvar** funciona | ok |
+| E3 | **Configurações** → **Acessibilidade** → **Efeitos visuais** → desligar **Efeitos de animação**; reabrir o app | O anel para de girar; ao ditar, os pulsos viram uma leve troca de opacidade | ok |
 | E4 | **Ajustes** → Tema **Claro** e **Escuro**; depois **Sistema** | As cores mudam na hora; em Sistema segue o tema do Windows | ok |
 
 No Android, o equivalente ao E3 é **Configurações** → **Acessibilidade** →

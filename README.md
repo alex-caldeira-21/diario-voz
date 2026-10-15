@@ -233,6 +233,9 @@ Decisões tomadas durante a implementação, com o motivo:
 - **Service worker como módulo** (Chrome/Edge 91+), para reaproveitar
   `fila.js` e `api.js` no Background Sync.
 - **Toast no topo** e **"Desfazer" no Limpar**.
+- **Navegação com ícone e nome**: no celular, barra fixa embaixo (zona do
+  polegar); no PC (≥ 768 px), barra de pílulas no topo. As abas de texto no
+  topo do SPEC ficavam escondidas.
 - **Python do venv** (`sync/.venv`) em vez do lançador `py`, que não existe
   nesta máquina; tarefas criadas com `Register-ScheduledTask` porque o espaço
   em "Segunda Memoria" quebra as aspas do `schtasks /tr` no PowerShell 5.1.
