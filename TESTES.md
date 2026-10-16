@@ -31,6 +31,10 @@ No editor do Apps Script, abra `Testes.gs`, escolha a função e clique em
 | `testePerguntar` | perguntar, recentes, pendentes | 3 × OK |
 | `testeCompras` | as 8 frases de compras, na lista "Compras (teste)"; o evento é calculado, não criado | 9 × OK |
 
+Resultado em 16/10/2026 do `testeCompras`: 9 × OK, depois que o
+classificador passou a receber a tabela dos próximos 7 dias (antes, o modelo
+calculou "sábado" como 18/10).
+
 Resultado em 14/10/2026: todos OK. Depois do ajuste do prompt, a frase 5
 (atenuação no enlace) passou a vir como `trabalho`.
 
