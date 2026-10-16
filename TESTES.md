@@ -29,6 +29,7 @@ No editor do Apps Script, abra `Testes.gs`, escolha a função e clique em
 | `testeRegistrar` | gravação, reenvio do mesmo id, texto só com `trim()`, data ISO preservada, textos começando com `=`, `+`, `-`, `0012` | 11 × OK (as linhas de teste são marcadas como `processado`) |
 | `testeClassificar` | as 5 frases do SPEC | 5 × OK; um `aviso` de tipo diferente do esperado não é falha |
 | `testePerguntar` | perguntar, recentes, pendentes | 3 × OK |
+| `testeCompras` | as 8 frases de compras, na lista "Compras (teste)"; o evento é calculado, não criado | 9 × OK |
 
 Resultado em 14/10/2026: todos OK. Depois do ajuste do prompt, a frase 5
 (atenuação no enlace) passou a vir como `trabalho`.

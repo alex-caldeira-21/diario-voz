@@ -35,9 +35,10 @@
   --c-decisao: #3DDC97;
   --c-pessoal: #FF3D9A;
   --c-registro: #FF8A3D;
+  --c-compra: #A3E635;
 
-  --espectro-vivo: conic-gradient(#2EC4F1, #3DDC97, #FFD23F, #FF8A3D, #FF3D9A, #8B5CF6, #2EC4F1);
-  --espectro-linear: linear-gradient(90deg, #2EC4F1, #3DDC97, #FFD23F, #FF8A3D, #FF3D9A, #8B5CF6);
+  --espectro-vivo: conic-gradient(#2EC4F1, #3DDC97, #A3E635, #FFD23F, #FF8A3D, #FF3D9A, #8B5CF6, #2EC4F1);
+  --espectro-linear: linear-gradient(90deg, #2EC4F1, #3DDC97, #A3E635, #FFD23F, #FF8A3D, #FF3D9A, #8B5CF6);
   --foco: var(--c-trabalho);
 
   --r-pilula: 999px;
@@ -70,6 +71,7 @@
     --c-decisao: #0A7A4D;
     --c-pessoal: #C8136E;
     --c-registro: #B04E10;
+    --c-compra: #4D7C0F;
     color-scheme: light;
   }
 }
@@ -85,6 +87,7 @@
   --c-decisao: #0A7A4D;
   --c-pessoal: #C8136E;
   --c-registro: #B04E10;
+  --c-compra: #4D7C0F;
   color-scheme: light;
 }
 
@@ -524,6 +527,7 @@ main {
 .t-decisao  { --cor-tipo: var(--c-decisao); }
 .t-pessoal  { --cor-tipo: var(--c-pessoal); }
 .t-registro { --cor-tipo: var(--c-registro); }
+.t-compra   { --cor-tipo: var(--c-compra); }
 
 .vazio { color: var(--texto-2); max-width: 32ch; }
 

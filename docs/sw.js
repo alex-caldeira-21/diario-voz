@@ -3,7 +3,7 @@
 
 import { enviarFila } from './api.js';
 
-const VERSAO = '2';
+const VERSAO = '3';
 const CACHE = `diario-voz-v${VERSAO}`;
 
 const SHELL = [

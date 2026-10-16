@@ -24,6 +24,19 @@ function setup() {
     }
   }
 
+  // Colunas acrescentadas depois da primeira versão (lembrete_hora, compras_*)
+  const antes = planilha.getSheetByName(ABA).getLastColumn();
+  garantirColunas_(planilha.getSheetByName(ABA));
+  if (planilha.getSheetByName(ABA).getLastColumn() > antes) feito.push('colunas novas no cabeçalho');
+
+  // Lista de compras no Google Tasks
+  if (!PROPS.getProperty('COMPRAS_LIST_ID')) {
+    const lista = obterOuCriarLista_(NOME_LISTA_COMPRAS);
+    PROPS.setProperty('COMPRAS_LIST_ID', lista.id);
+    feito.push(lista.criada ? 'lista "' + NOME_LISTA_COMPRAS + '" criada no Google Tasks'
+      : 'lista "' + NOME_LISTA_COMPRAS + '" existente reaproveitada');
+  }
+
   // Token e modelo
   if (!PROPS.getProperty('APP_TOKEN')) {
     PROPS.setProperty('APP_TOKEN', (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''));

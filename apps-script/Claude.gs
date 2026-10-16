@@ -6,16 +6,31 @@ const SISTEMA_CLASSIFICAR = [
   'infraestrutura de telecom (POPs, datacenters, nobreaks, fibra óptica) que',
   'também estuda, empreende e tem vida pessoal.',
   'Responda SOMENTE com JSON válido, sem texto extra:',
-  '{"tipo": "...", "tags": ["..."], "lembrete_data": "AAAA-MM-DD" | null}',
-  '- tipo: um de registro, trabalho, lembrete, ideia, decisao, pessoal.',
+  '{"tipo": "...", "tags": ["..."], "lembrete_data": "AAAA-MM-DD" | null,',
+  ' "lembrete_hora": "HH:MM" | null,',
+  ' "compras": {"acao": "adicionar" | "concluir", "itens": [{"nome": "...", "quantidade": "..." | null}]} | null}',
+  '- tipo: um de registro, trabalho, lembrete, ideia, decisao, pessoal, compra.',
   '  "lembrete" = algo que a pessoa precisa fazer ou lembrar no futuro.',
   '  "trabalho" = qualquer fato técnico ou profissional (medições, alarmes,',
   '  manutenção, enlaces, equipamentos, clientes), mesmo sem ação pendente.',
   '  "registro" = fato do dia que não é trabalho nem pessoal.',
+  '  "compra" = itens da lista de compras pessoal (mercado, casa): algo que',
+  '  acabou, está faltando, precisa ser comprado, ou que já foi comprado.',
   '- tags: 1 a 3, kebab-case, minúsculas, sem acento; prefira nomes próprios',
   '  citados (cidade/POP, equipamento, projeto).',
-  '- lembrete_data: só se houver prazo; resolva datas relativas ("sexta",',
-  '  "amanhã") usando a data de referência fornecida.'
+  '- lembrete_data: só para lembrete ou compra, e só se houver prazo ou dia',
+  '  marcado; resolva datas relativas ("sexta", "amanhã", "sábado") usando a',
+  '  data de referência fornecida.',
+  '- lembrete_hora: só se a hora for dita, no formato 24 h ("9h" -> "09:00");',
+  '  exige lembrete_data.',
+  '- compras: só quando tipo = compra; nos outros tipos, null.',
+  '  acao "adicionar": "acabou X", "tá faltando X", "preciso comprar X",',
+  '  "lembrar de comprar X", "comprar X", lista de mercado.',
+  '  acao "concluir": "já comprei X", "comprei X".',
+  '  nome: o substantivo do item, minúsculo, no singular quando for natural,',
+  '  com as palavras do usuário (nunca troque marca nem produto).',
+  '  quantidade: só se for dita (ex.: "2 litros"); nunca invente; senão null.',
+  '  Um item por coisa citada.'
 ].join('\n');
 
 const SISTEMA_PERGUNTAR = [
@@ -26,15 +41,24 @@ const SISTEMA_PERGUNTAR = [
   'introdução.'
 ].join('\n');
 
+const SISTEMA_COMPRAS = [
+  'Você responde perguntas sobre a lista de compras do usuário usando SOMENTE',
+  'os itens em aberto fornecidos (o que ainda falta comprar). Se a lista',
+  'estiver vazia ou o item perguntado não estiver nela, diga isso. Nunca',
+  'invente itens. Português do Brasil, direto, sem introdução; para "o que',
+  'falta", liste os itens.'
+].join('\n');
+
 const DIAS_SEMANA_ = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira',
   'quinta-feira', 'sexta-feira', 'sábado'];
 
-// Retorna { tipo, tags: [], lembrete_data: 'AAAA-MM-DD' | '' }. Lança erro se a API falhar.
+// Retorna { tipo, tags: [], lembrete_data: 'AAAA-MM-DD' | '', lembrete_hora: 'HH:MM' | '',
+//           compras: { acao, itens: [{ nome, quantidade }] } | null }. Lança erro se a API falhar.
 function classificar(texto, criadoEm) {
   // O dia da semana ajuda o modelo a resolver "sexta", "amanhã" etc. sem errar a conta.
   const usuario = 'Data de referência: ' + criadoEm + ' (' + diaDaSemana_(criadoEm) + ')\n' +
     'Entrada: ' + texto;
-  const bruto = chamarClaude_(SISTEMA_CLASSIFICAR, usuario, 150);
+  const bruto = chamarClaude_(SISTEMA_CLASSIFICAR, usuario, 500);
   const r = parseJson_(bruto);
 
   const tipo = TIPOS.indexOf(r.tipo) >= 0 ? r.tipo : 'registro';
@@ -47,10 +71,29 @@ function classificar(texto, criadoEm) {
       return true;
     })
     .slice(0, 3);
-  const data = (tipo === 'lembrete' && typeof r.lembrete_data === 'string' &&
-    RE_DATA.test(r.lembrete_data)) ? r.lembrete_data : '';
+  const comData = tipo === 'lembrete' || tipo === 'compra';
+  const data = (comData && typeof r.lembrete_data === 'string' && RE_DATA.test(r.lembrete_data)) ? r.lembrete_data : '';
+  const hora = (data && typeof r.lembrete_hora === 'string' && RE_HORA.test(r.lembrete_hora)) ? r.lembrete_hora : '';
 
-  return { tipo: tipo, tags: tags, lembrete_data: data };
+  return {
+    tipo: tipo, tags: tags, lembrete_data: data, lembrete_hora: hora,
+    compras: tipo === 'compra' ? validarCompras_(r.compras) : null
+  };
+}
+
+function validarCompras_(c) {
+  if (!c || typeof c !== 'object') return null;
+  const acao = c.acao === 'concluir' ? 'concluir' : (c.acao === 'adicionar' ? 'adicionar' : null);
+  if (!acao) return null;
+  const itens = (Array.isArray(c.itens) ? c.itens : [])
+    .map(function (i) {
+      const nome = i && typeof i.nome === 'string' ? i.nome.trim().replace(/\s+/g, ' ').toLowerCase() : '';
+      const qtd = i && typeof i.quantidade === 'string' && i.quantidade.trim() ? i.quantidade.trim() : null;
+      return { nome: nome.substring(0, 100), quantidade: qtd ? qtd.substring(0, 50) : null };
+    })
+    .filter(function (i) { return i.nome; })
+    .slice(0, 30);
+  return itens.length ? { acao: acao, itens: itens } : null;
 }
 
 // `entradas` já vem em ordem cronológica.
@@ -64,6 +107,13 @@ function perguntar(pergunta, entradas, dias) {
     'Entradas:\n' + linhas.join('\n') + '\n\n' +
     'Pergunta: ' + pergunta;
   return chamarClaude_(SISTEMA_PERGUNTAR, usuario, 800).trim();
+}
+
+// `itens` são os títulos em aberto da lista de compras.
+function perguntarCompras(pergunta, itens) {
+  const lista = itens.length ? itens.map(function (t) { return '- ' + t; }).join('\n') : '(lista vazia)';
+  const usuario = 'Itens em aberto na lista de compras:\n' + lista + '\n\nPergunta: ' + pergunta;
+  return chamarClaude_(SISTEMA_COMPRAS, usuario, 400).trim();
 }
 
 function chamarClaude_(sistema, usuario, maxTokens) {

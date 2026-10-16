@@ -148,6 +148,19 @@ def test_tarefas_acrescentadas_em_secao_existente():
         "- [ ] Primeira 📅 2026-10-20", "- [ ] Segunda 📅 2026-10-21"]
 
 
+def test_compra_entra_como_texto_sem_checkbox_nem_lembretes():
+    e = entrada("id-compra", "2026-10-14T10:00:00-03:00",
+                "Sábado às 9h mercado: arroz, feijão, ração do cachorro", tipo="compra",
+                tags=["mercado"], lembrete_data="2026-10-17")
+    e["lembrete_hora"] = "09:00"
+    e["compras"] = {"acao": "adicionar", "itens": [{"nome": "arroz", "quantidade": None}]}
+    texto, ids = nota.atualizar_nota(None, DIA, [e])
+    assert ids == ["id-compra"]
+    assert ("### 10:00 (compra)\n<!-- id:id-compra -->\n"
+            "Sábado às 9h mercado: arroz, feijão, ração do cachorro\n#mercado") in texto
+    assert "- [ ]" not in texto and "## Lembretes" not in texto
+
+
 # ---------- ordem cronológica com entrada offline ----------
 
 def test_entrada_offline_antiga_entra_na_posicao_certa():

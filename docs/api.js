@@ -85,7 +85,7 @@ async function enviarFilaSemLock() {
     try {
       const r = await chamar('registrar', { id: e.id, criado_em: e.criado_em, texto: e.texto, origem: e.origem }, cred);
       await remover(e.id);
-      enviadas.push({ id: e.id, tipo: r.tipo, tags: r.tags, duplicado: !!r.duplicado });
+      enviadas.push({ id: e.id, tipo: r.tipo, tags: r.tags, duplicado: !!r.duplicado, compras: r.compras || null });
     } catch (err) {
       if (err.rede) { motivo = 'rede'; break; }
       if (err.codigo === 'nao_autorizado' || err.codigo === 'resposta_invalida') { motivo = 'nao_autorizado'; break; }

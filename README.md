@@ -48,6 +48,7 @@ Nenhuma entrada se perde:
 | **deploymentId** | `AKfycbwc9HYvopw6fVH0EK8MbPD7d7QFj15rZU5stIMdRDRb3uPfaTL90NV2QUtiXnmq8ls` |
 | URL do web app | `https://script.google.com/macros/s/AKfycbwc9HYvopw6fVH0EK8MbPD7d7QFj15rZU5stIMdRDRb3uPfaTL90NV2QUtiXnmq8ls/exec` |
 | Planilha | `diario-voz`, aba `diario` (o link aparece no log do `setup()`) |
+| Lista de compras | Google Tasks "Compras", id em `COMPRAS_LIST_ID` |
 
 O `deploymentId` nunca muda: o app no celular guarda a URL.
 
@@ -176,6 +177,25 @@ assim que o token novo for salvo.
 - Chave: edite `ANTHROPIC_KEY` nas Propriedades do script. Não precisa de
   novo deployment.
 - Modelo: edite `MODELO` (padrão `claude-haiku-4-5`).
+
+### Lista de compras (Google Tasks)
+
+Entradas como "acabou o café", "preciso comprar 2 litros de leite" ou "já
+comprei o café" viram `tipo=compra` e atualizam a lista **Compras** do Google
+Tasks (`COMPRAS_LIST_ID` nas Propriedades do script, criada pelo `setup()`):
+
+- **adicionar:** insere o item (`leite (2 litros)` quando há quantidade); se o
+  nome já está aberto, pula.
+- **concluir:** marca como concluído o único item aberto que contém o nome; com
+  0 ou 2+ correspondências não faz nada e avisa.
+- Com dia marcado ("sábado às 9h mercado: …"), cria **um** evento "Compras (N
+  itens)" na agenda padrão, com a lista atual na descrição.
+- Nada é apagado no Tasks (só inserir e concluir). O resultado vai na coluna
+  `compras_resultado`; se o Tasks falhar, `sincronizarLembretes()` reprocessa
+  no gatilho de 6 h.
+- Em **Perguntar**, perguntas sobre compras ("o que falta comprar?") são
+  respondidas pela lista aberta, não pela planilha.
+- No Obsidian, compras entram em "## Entradas" como texto, sem checkbox.
 
 ### Reclassificar entradas
 

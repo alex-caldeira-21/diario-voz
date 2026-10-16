@@ -22,8 +22,9 @@ function acaoRegistrar_(req) {
   } catch (err) {
     return erro_('ocupado', 'Servidor ocupado. Tente de novo em instantes.');
   }
+  let resposta, sh, linhaCompras = null;
   try {
-    const sh = aba_();
+    sh = aba_();
     const existente = linhaDoId_(sh, id);
     if (existente) {
       const tipo = String(sh.getRange(existente, COL.tipo).getValue());
@@ -31,7 +32,7 @@ function acaoRegistrar_(req) {
     }
 
     // Falha da IA nunca impede a gravação: entra como registro, reprocessável depois.
-    let c = { tipo: 'registro', tags: [], lembrete_data: '' };
+    let c = { tipo: 'registro', tags: [], lembrete_data: '', lembrete_hora: '', compras: null };
     let classificado = false;
     try {
       c = classificar(texto, criadoEm);
@@ -40,19 +41,39 @@ function acaoRegistrar_(req) {
       console.warn('classificar falhou: ' + err.message);
     }
 
-    gravarCelulas_(sh, sh.getLastRow() + 1, 1, [
+    const linha = sh.getLastRow() + 1;
+    gravarCelulas_(sh, linha, 1, [
       id, criadoEm, agoraIso_(), c.tipo, c.tags.join(', '), texto,
       c.lembrete_data || '', origem, 'inbox', classificado ? 'TRUE' : 'FALSE'
     ]);
+    gravarCelulas_(sh, linha, coluna_('lembrete_hora'), [c.lembrete_hora || '']);
+    if (c.compras) gravarCelulas_(sh, linha, coluna_('compras_json'), [JSON.stringify(c.compras)]);
     SpreadsheetApp.flush();
 
-    return {
+    resposta = {
       ok: true, tipo: c.tipo, tags: c.tags,
-      lembrete_data: c.lembrete_data || null, classificado: classificado
+      lembrete_data: c.lembrete_data || null, lembrete_hora: c.lembrete_hora || null,
+      classificado: classificado
     };
+    if (c.compras) {
+      linhaCompras = { _linha: linha, criado_em: criadoEm, compras: c.compras,
+        lembrete_data: c.lembrete_data, lembrete_hora: c.lembrete_hora };
+    }
   } finally {
     lock.releaseLock();
   }
+
+  // Depois de gravar e fora do lock: a entrada já está salva, e uma falha do
+  // Google Tasks fica para sincronizarLembretes().
+  if (linhaCompras) {
+    try {
+      resposta.compras = aplicarComprasDaLinha_(sh, linhaCompras);
+    } catch (err) {
+      console.warn('aplicarCompras falhou: ' + err.message);
+      resposta.compras = { erro: true };
+    }
+  }
+  return resposta;
 }
 
 function acaoRecentes_(req) {
@@ -127,6 +148,9 @@ function acaoReclassificar_() {
     if (String(sh.getRange(l._linha, COL.id).getValue()).toLowerCase() !== l.id.toLowerCase()) continue;
     gravarCelulas_(sh, l._linha, COL.tipo, [c.tipo, c.tags.join(', ')]);
     gravarCelulas_(sh, l._linha, COL.lembrete_data, [c.lembrete_data || '']);
+    gravarCelulas_(sh, l._linha, coluna_('lembrete_hora'), [c.lembrete_hora || '']);
+    // Se virou compra, sincronizarLembretes() aplica na lista (compras_resultado vazio).
+    if (c.compras) gravarCelulas_(sh, l._linha, coluna_('compras_json'), [JSON.stringify(c.compras)]);
     gravarCelulas_(sh, l._linha, COL.classificado, ['TRUE']);
     reclassificados++;
   }
@@ -141,6 +165,8 @@ function acaoReclassificar_() {
 function gatilhoReclassificar() {
   const r = acaoReclassificar_();
   console.log('reclassificar: ' + JSON.stringify(r));
+  const s = sincronizarLembretes();
+  console.log('sincronizarLembretes: ' + JSON.stringify(s));
 }
 
 function acaoPerguntar_(req) {
@@ -148,6 +174,14 @@ function acaoPerguntar_(req) {
   if (!pergunta) return erro_('pergunta_vazia', 'A pergunta está vazia.');
   if (pergunta.length > 2000) return erro_('pergunta_grande', 'A pergunta passou de 2.000 caracteres.');
   const dias = inteiro_(req.dias, 30, 1, 365);
+
+  // Perguntas sobre compras são respondidas pela lista aberta do Google Tasks.
+  const listaId = PROPS.getProperty('COMPRAS_LIST_ID');
+  if (listaId && ehPerguntaDeCompras_(pergunta)) {
+    const itens = itensAbertos_(listaId).map(function (a) { return a.titulo; });
+    const resp = itens.length ? perguntarCompras(pergunta, itens) : 'A lista de compras está vazia.';
+    return { ok: true, resposta: resp, usadas: itens.length, fonte: 'compras' };
+  }
 
   const corte = Date.now() - dias * 24 * 3600 * 1000;
   const janela = lerLinhas_().filter(function (l) {

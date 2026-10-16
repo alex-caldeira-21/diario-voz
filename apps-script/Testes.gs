@@ -85,6 +85,74 @@ function testeTokenInvalido() {
   Logger.log('IA configurada: ' + r5.ia_configurada);
 }
 
+// Lista de compras: usa a lista "Compras (teste)", criada e usada só por este teste.
+// Não cria evento de verdade no Calendar (criarEvento:false): confere o evento calculado.
+function testeCompras() {
+  const REF = '2026-10-14T10:00:00-03:00';
+  const lista = listaDeTeste_();
+  const n = normalizar;
+  const abertos = function () { return itensAbertos_(lista).map(function (a) { return a.nome; }); };
+  const passo = function (frase) {
+    const c = classificar(frase, REF);
+    Logger.log(JSON.stringify(c) + '  <- ' + frase);
+    const r = c.compras ? aplicarCompras({ criado_em: REF, compras: c.compras, lembrete_data: c.lembrete_data,
+      lembrete_hora: c.lembrete_hora }, { listaId: lista, criarEvento: false }) : null;
+    if (r) Logger.log('        ' + resumoCompras_(r));
+    return { c: c, r: r };
+  };
+
+  let t = passo('Acabou o café e o detergente');
+  confere_(t.c.tipo === 'compra' && t.r && t.r.acao === 'adicionar' &&
+    mesmos_(t.r.adicionados.map(n), ['cafe', 'detergente']), '1 adiciona café e detergente');
+
+  t = passo('Comprar 2 litros de leite');
+  confere_(t.r && t.r.adicionados.length === 1 && n(t.r.adicionados[0]) === 'leite (2 litros)', '2 adiciona "leite (2 litros)"');
+
+  t = passo('Comprar leite');
+  confere_(t.r && !t.r.adicionados.length && t.r.ja_na_lista.map(n).join() === 'leite', '3 leite já na lista, pulado');
+
+  t = passo('Já comprei o café');
+  confere_(t.r && t.r.acao === 'concluir' && t.r.concluidos.map(n).join() === 'cafe' &&
+    abertos().indexOf('cafe') < 0, '4 conclui café');
+
+  Tasks.Tasks.insert({ title: 'café' }, lista);
+  Tasks.Tasks.insert({ title: 'café solúvel' }, lista);
+  const antes5 = abertos().length;
+  t = passo('Comprei café');
+  confere_(t.r && t.r.ambiguos.length === 1 && !t.r.concluidos.length && abertos().length === antes5,
+    '5 "café" e "café solúvel" abertos: ambíguo, nada muda');
+
+  t = passo('Sábado às 9h mercado: arroz, feijão, ração do cachorro');
+  const nomes6 = t.r ? t.r.adicionados.map(n) : [];
+  confere_(nomes6.length === 3 && nomes6.indexOf('arroz') >= 0 && nomes6.indexOf('feijao') >= 0 &&
+    nomes6.some(function (x) { return x.indexOf('racao') >= 0; }), '6 adiciona arroz, feijão e ração');
+  confere_(t.c.lembrete_data === '2026-10-17' && t.c.lembrete_hora === '09:00' && t.r && t.r.evento &&
+    /^Compras \(\d+ itens\)$/.test(t.r.evento.titulo), '6 evento 2026-10-17 09:00: ' + JSON.stringify(t.r && t.r.evento));
+
+  const antes7 = abertos().length;
+  t = passo('Comprei pão hoje cedo');
+  confere_(t.r && t.r.nao_encontrados.map(n).join() === 'pao' && abertos().length === antes7, '7 pão não encontrado, nada muda');
+
+  t = passo('Reunião com o fornecedor amanhã');
+  confere_(t.c.tipo === 'lembrete' && !t.c.compras && !t.r, '8 lembrete, nenhuma compra');
+}
+
+// Reaproveita a lista de teste entre execuções e a deixa vazia marcando os itens
+// abertos como concluídos (nunca apaga).
+function listaDeTeste_() {
+  let id = PROPS.getProperty('COMPRAS_TESTE_LIST_ID');
+  if (!id) {
+    id = Tasks.Tasklists.insert({ title: 'Compras (teste)' }).id;
+    PROPS.setProperty('COMPRAS_TESTE_LIST_ID', id);
+  }
+  itensAbertos_(id).forEach(function (a) { Tasks.Tasks.patch({ status: 'completed' }, id, a.id); });
+  return id;
+}
+
+function mesmos_(a, b) {
+  return JSON.stringify(a.slice().sort()) === JSON.stringify(b.slice().sort());
+}
+
 // ---------- auxiliares ----------
 
 function chamar_(obj) {

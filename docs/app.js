@@ -9,8 +9,8 @@ const $ = (sel) => document.querySelector(sel);
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
   'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-const TIPOS = ['trabalho', 'lembrete', 'ideia', 'decisao', 'pessoal', 'registro'];
-const ROTULO = { trabalho: 'trabalho', lembrete: 'lembrete', ideia: 'ideia', decisao: 'decisão', pessoal: 'pessoal', registro: 'registro' };
+const TIPOS = ['trabalho', 'compra', 'lembrete', 'ideia', 'decisao', 'pessoal', 'registro'];
+const ROTULO = { trabalho: 'trabalho', lembrete: 'lembrete', ideia: 'ideia', decisao: 'decisão', pessoal: 'pessoal', registro: 'registro', compra: 'compra' };
 const MAX_TEXTO = 10000;
 const MSG_OFFLINE = 'Sem conexão. A entrada ficou na fila e será enviada quando a rede voltar.';
 const ORIGEM_PADRAO = /Android/i.test(navigator.userAgent) ? 'android' : 'windows';
@@ -302,7 +302,7 @@ async function enviarComAviso(idSalvo) {
 
   const minha = r.enviadas.find((x) => x.id === idSalvo);
   if (minha) {
-    toast(`Salvo como ${ROTULO[minha.tipo] || minha.tipo}`);
+    toast((minha.compras && mensagemCompras(minha.compras)) || `Salvo como ${ROTULO[minha.tipo] || minha.tipo}`);
     anelPrincipal.flash(minha.tipo);
     reenvio.zerar();
     return;
@@ -312,6 +312,34 @@ async function enviarComAviso(idSalvo) {
   else if (r.motivo === 'rede') { toast(MSG_OFFLINE); reenvio.agendar(); registrarSync(); }
   else if (r.motivo) { toast('Salvo na fila. O envio falhou e será tentado de novo.'); reenvio.agendar(); registrarSync(); }
   else toast('Salvo.');
+}
+
+// "a", "a e b", "a, b e c"
+function emLista(itens) {
+  if (itens.length <= 1) return itens.join('');
+  return itens.slice(0, -1).join(', ') + ' e ' + itens[itens.length - 1];
+}
+
+// Toast de uma entrada tipo compra a partir do resultado do Google Tasks.
+function mensagemCompras(c) {
+  if (c.erro) return 'Salvo como compra, mas a lista não foi atualizada agora. Ela será atualizada mais tarde.';
+  const partes = [];
+  const add = c.adicionados || [];
+  if (add.length === 1) partes.push(`${add[0]} adicionado às compras`);
+  else if (add.length > 1) partes.push(`${add.length} itens adicionados às compras`);
+  const ja = c.ja_na_lista || [];
+  if (ja.length) partes.push(`${emLista(ja)} já ${ja.length === 1 ? 'estava' : 'estavam'} na lista`);
+  const ok = c.concluidos || [];
+  if (ok.length) partes.push(`${emLista(ok)} ${ok.length === 1 ? 'marcado como comprado' : 'marcados como comprados'}`);
+  const nao = c.nao_encontrados || [];
+  if (nao.length) partes.push(`Não achei ${emLista(nao.map((x) => `'${x}'`))} na lista`);
+  for (const a of c.ambiguos || []) partes.push(`Mais de um item parecido: ${a.candidatos.join(', ')}. Nada foi marcado`);
+  if (c.evento) {
+    const [, m, d] = c.evento.data.split('-');
+    partes.push(`Lembrete de compras em ${d}/${m}${c.evento.hora ? ' às ' + c.evento.hora : ''}`);
+  }
+  if (!partes.length) return null;
+  return partes.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('. ') + '.';
 }
 
 // Backoff 2 s -> 8 s -> 30 s enquanto o app está aberto. Com o app fechado, o
@@ -388,7 +416,7 @@ $('#form-pergunta').addEventListener('submit', async (ev) => {
   saida.textContent = 'Consultando o diário…';
   try {
     const r = await chamar('perguntar', { pergunta, dias });
-    desenharResposta(saida, r.resposta, r.usadas);
+    desenharResposta(saida, r.resposta, r.usadas, r.fonte);
   } catch (err) {
     saida.className = 'resposta';
     saida.textContent = err.rede ? 'Sem conexão. Perguntar ao diário precisa de internet.' : err.message;
@@ -398,7 +426,7 @@ $('#form-pergunta').addEventListener('submit', async (ev) => {
 });
 
 // Renderização mínima e segura: parágrafos, listas com "- " e **negrito**.
-function desenharResposta(saida, texto, usadas) {
+function desenharResposta(saida, texto, usadas, fonte) {
   saida.className = 'resposta';
   saida.replaceChildren();
   for (const bloco of String(texto).split(/\n\s*\n/)) {
@@ -414,7 +442,8 @@ function desenharResposta(saida, texto, usadas) {
       saida.append(p);
     }
   }
-  saida.append(el('p', 'nota', usadas === 1 ? 'Baseado em 1 entrada.' : `Baseado em ${usadas} entradas.`));
+  if (fonte === 'compras') saida.append(el('p', 'nota', usadas === 1 ? 'Baseado em 1 item da lista de compras.' : `Baseado em ${usadas} itens da lista de compras.`));
+  else saida.append(el('p', 'nota', usadas === 1 ? 'Baseado em 1 entrada.' : `Baseado em ${usadas} entradas.`));
 }
 
 function comNegrito(alvo, linha) {
@@ -514,7 +543,7 @@ function itemEntrada(e) {
   else meta.append(el('span', 'tipo', ROTULO[e.tipo] || e.tipo));
   if (e.lembrete_data) {
     const [, m, d] = e.lembrete_data.split('-');
-    meta.append(el('span', null, `até ${d}/${m}`));
+    meta.append(el('span', null, `até ${d}/${m}${e.lembrete_hora ? ' ' + e.lembrete_hora : ''}`));
   }
 
   li.append(meta, el('p', null, e.texto));

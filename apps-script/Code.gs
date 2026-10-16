@@ -10,7 +10,10 @@ const COL = {
   id: 1, criado_em: 2, recebido_em: 3, tipo: 4, tags: 5, texto: 6,
   lembrete_data: 7, origem: 8, status: 9, classificado: 10
 };
-const TIPOS = ['registro', 'trabalho', 'lembrete', 'ideia', 'decisao', 'pessoal'];
+// Colunas acrescentadas depois da primeira versão: ficam no fim e são
+// localizadas pelo nome do cabeçalho (garantirColunas_ cria as que faltarem).
+const COLUNAS_EXTRAS = ['lembrete_hora', 'compras_json', 'compras_resultado'];
+const TIPOS = ['registro', 'trabalho', 'lembrete', 'ideia', 'decisao', 'pessoal', 'compra'];
 const ORIGENS = ['android', 'windows', 'compartilhar'];
 const MAX_TEXTO = 10000;
 const MAX_CORPO = 20 * 1024;
@@ -19,6 +22,7 @@ const MODELO_PADRAO = 'claude-haiku-4-5';
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const RE_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 const RE_DATA = /^\d{4}-\d{2}-\d{2}$/;
+const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const ACOES = {
   ping: acaoPing_,
@@ -70,7 +74,11 @@ function doGet() {
 
 // Confere a conexão e o token sem tocar na planilha. Usado por "Testar conexão".
 function acaoPing_() {
-  return { ok: true, servico: 'diario-voz', ia_configurada: !!PROPS.getProperty('ANTHROPIC_KEY') };
+  return {
+    ok: true, servico: 'diario-voz',
+    ia_configurada: !!PROPS.getProperty('ANTHROPIC_KEY'),
+    compras_configurada: !!PROPS.getProperty('COMPRAS_LIST_ID')
+  };
 }
 
 // ---------- utilitários ----------
@@ -125,8 +133,42 @@ function aba_() {
   if (!id) throw new Error('SHEET_ID ausente. Rode setup() no editor.');
   const sh = SpreadsheetApp.openById(id).getSheetByName(ABA);
   if (!sh) throw new Error('Aba "' + ABA + '" não encontrada. Rode setup() no editor.');
+  garantirColunas_(sh);
   abaCache_ = sh;
   return sh;
+}
+
+let mapaColunasCache_ = null;
+
+// { nome_do_cabecalho: número da coluna (1-based) }
+function mapaColunas_(sh) {
+  if (mapaColunasCache_) return mapaColunasCache_;
+  const cab = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const mapa = {};
+  cab.forEach(function (nome, i) { if (nome) mapa[String(nome).trim()] = i + 1; });
+  mapaColunasCache_ = mapa;
+  return mapa;
+}
+
+function coluna_(nome) {
+  const c = mapaColunas_(aba_())[nome];
+  if (!c) throw new Error('Coluna "' + nome + '" não encontrada no cabeçalho.');
+  return c;
+}
+
+// Acrescenta no fim do cabeçalho as colunas extras que faltarem. Não move nem apaga nada.
+function garantirColunas_(sh) {
+  mapaColunasCache_ = null;
+  const mapa = mapaColunas_(sh);
+  const faltam = COLUNAS_EXTRAS.filter(function (n) { return !mapa[n]; });
+  if (!faltam.length) return;
+  const inicio = sh.getLastColumn() + 1;
+  if (sh.getMaxColumns() < inicio + faltam.length - 1) {
+    sh.insertColumnsAfter(sh.getMaxColumns(), inicio + faltam.length - 1 - sh.getMaxColumns());
+  }
+  sh.getRange(1, inicio, sh.getMaxRows(), faltam.length).setNumberFormat('@');
+  sh.getRange(1, inicio, 1, faltam.length).setValues([faltam]).setFontWeight('bold');
+  mapaColunasCache_ = null;
 }
 
 // Todas as linhas de dados como objetos, com o número da linha em _linha.
@@ -134,12 +176,18 @@ function lerLinhas_() {
   const sh = aba_();
   const ultima = sh.getLastRow();
   if (ultima < 2) return [];
-  const valores = sh.getRange(2, 1, ultima - 1, CABECALHO.length).getValues();
+  const mapa = mapaColunas_(sh);
+  const largura = sh.getLastColumn();
+  const valores = sh.getRange(2, 1, ultima - 1, largura).getValues();
+  const extra = function (v, nome) { return mapa[nome] ? String(v[mapa[nome] - 1]) : ''; };
   const linhas = [];
   for (let i = 0; i < valores.length; i++) {
     const v = valores[i];
     if (!v[0]) continue;
     linhas.push({
+      lembrete_hora: extra(v, 'lembrete_hora'),
+      compras_json: extra(v, 'compras_json'),
+      compras_resultado: extra(v, 'compras_resultado'),
       _linha: i + 2,
       id: String(v[0]),
       criado_em: String(v[1]),
@@ -184,8 +232,16 @@ function objetoPublico_(l) {
     tags: l.tags ? l.tags.split(/\s*,\s*/).filter(String) : [],
     texto: l.texto,
     lembrete_data: l.lembrete_data || null,
+    lembrete_hora: l.lembrete_hora || null,
     origem: l.origem,
     status: l.status,
-    classificado: l.classificado
+    classificado: l.classificado,
+    compras: lerComprasJson_(l.compras_json),
+    compras_resultado: l.compras_resultado || null
   };
+}
+
+function lerComprasJson_(s) {
+  if (!s) return null;
+  try { return JSON.parse(s); } catch (err) { return null; }
 }
