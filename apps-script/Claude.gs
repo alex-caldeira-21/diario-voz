@@ -19,8 +19,8 @@ const SISTEMA_CLASSIFICAR = [
   '- tags: 1 a 3, kebab-case, minúsculas, sem acento; prefira nomes próprios',
   '  citados (cidade/POP, equipamento, projeto).',
   '- lembrete_data: só para lembrete ou compra, e só se houver prazo ou dia',
-  '  marcado; resolva datas relativas ("sexta", "amanhã", "sábado") usando a',
-  '  data de referência fornecida.',
+  '  marcado. Para datas relativas ("amanhã", "sexta", "sábado"), copie a data',
+  '  da tabela "Próximos dias" fornecida; não calcule dia da semana por conta.',
   '- lembrete_hora: só se a hora for dita, no formato 24 h ("9h" -> "09:00");',
   '  exige lembrete_data.',
   '- compras: só quando tipo = compra; nos outros tipos, null.',
@@ -57,6 +57,7 @@ const DIAS_SEMANA_ = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira'
 function classificar(texto, criadoEm) {
   // O dia da semana ajuda o modelo a resolver "sexta", "amanhã" etc. sem errar a conta.
   const usuario = 'Data de referência: ' + criadoEm + ' (' + diaDaSemana_(criadoEm) + ')\n' +
+    'Próximos dias: ' + proximosDias_(criadoEm) + '\n' +
     'Entrada: ' + texto;
   const bruto = chamarClaude_(SISTEMA_CLASSIFICAR, usuario, 500);
   const r = parseJson_(bruto);
@@ -163,6 +164,22 @@ function parseJson_(texto) {
   } catch (err) {
     throw new Error('Resposta da IA não é JSON: ' + s.substring(0, 200));
   }
+}
+
+// "amanhã (quinta-feira) = 2026-10-15; sexta-feira = 2026-10-16; ..." para os 7 dias seguintes.
+// Os modelos erram a conta do dia da semana; com a tabela, basta copiar.
+function proximosDias_(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
+  if (!m) return '';
+  const base = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  const partes = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(base + i * 864e5);
+    const ymd = d.toISOString().substring(0, 10);
+    const nome = DIAS_SEMANA_[d.getUTCDay()];
+    partes.push((i === 1 ? 'amanhã (' + nome + ')' : nome) + ' = ' + ymd);
+  }
+  return partes.join('; ');
 }
 
 function diaDaSemana_(iso) {
